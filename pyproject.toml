@@ -1,0 +1,10 @@
+[project]
+name = "py-agent"
+version = "0.0.1"
+description = "simple agent harness"
+requires-python = ">=3.11"
+dependencies = [
+    "rich==15.0.0", 
+    "textual==8.2.8"
+]
+
