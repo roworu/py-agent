@@ -4,6 +4,7 @@ import difflib
 import json
 from pathlib import Path
 
+from rich.align import Align
 from rich.console import Group
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -14,7 +15,9 @@ ACCENT = "#d77757"
 TITLES = {"read": "Read", "write": "Write", "edit": "Update", "bash": "Bash",
           "todo_write": "Update Todos", "exit_plan_mode": "Plan"}
 MASCOT = Text("  ▄▄▄▄▄\n █ ● ● █~\n  ▀█▀█▀", ACCENT)
-TIPS = "/ for commands · @ for files · ! for bash mode · # to memorize · esc twice to rewind · ctrl+o transcript"
+TIPS = ["Run /init to create a CLAUDE.md file with instructions for the model",
+        "Use ! to run a command, # to memorize a note, @ to attach a file",
+        "Press esc twice to rewind, shift+tab to cycle modes, ctrl+o for transcript"]
 # lines shown under a tool call until ctrl+o
 SHORT = 3
 
@@ -42,15 +45,15 @@ def call_line(name: str, args: dict) -> str:
     return f"{title}({main.splitlines()[0] if main else ''})"
 
 
-def todos(items: list, indent: str = "     ") -> Text:
-    """☒ done, ☐ in progress (bold), ☐ pending; one per line, each starting with a newline."""
+def todos(items: list) -> Text:
+    """☒ done, ☐ in progress (bold), ☐ pending; one per line, each starting with a newline, the first after ⎿."""
     out = Text()
     for todo in items:
         if not isinstance(todo, dict):
             continue
         done, current = todo.get("status") == "completed", todo.get("status") == "in_progress"
         style = "strike dim" if done else "bold" if current else ""
-        out.append("\n" + indent).append(f"{'☒' if done else '☐'} {todo.get('content', '')}", style)
+        out.append("\n     " if out else "\n  ⎿  ").append(f"{'☒' if done else '☐'} {todo.get('content', '')}", style)
     return out
 
 
@@ -113,7 +116,9 @@ def result(name: str, args: dict, result: str, full: bool = False, start: int | 
 
 def tool(name: str, args: dict, output: str | None, full: bool, start: int | None = None):
     """A whole tool block: ⏺ call line, then todos, the plan or the result."""
-    head = Text.assemble(("⏺ ", "green"), (call_line(name, args), "bold"))
+    # dim while running, red when it failed
+    dot = "dim" if output is None else "red" if output.startswith("Error:") else "green"
+    head = Text.assemble(("⏺ ", dot), (call_line(name, args), "bold"))
     if name == "todo_write":
         head.append_text(todos(args.get("todos") or []))
     if output is not None:
@@ -145,9 +150,23 @@ def menu(items: list[tuple[str, str]], selected: int) -> Text:
     return out
 
 
-def welcome(cwd: Path) -> Panel:
-    """Mascot, greeting, cwd and tips in a rounded box."""
-    grid = Table.grid(padding=(0, 2))
-    grid.add_row(MASCOT, Text.assemble(("✻ ", ACCENT), ("Welcome to py-agent!", "bold"),
-                                       f"\n\n/help for help · shift+tab cycles modes\ncwd: {cwd}"))
-    return Panel(Group(grid, Text(), Text(TIPS, "dim")), border_style=ACCENT, expand=False)
+def shortcuts(pairs: list[tuple[str, str]]) -> Table:
+    """The "?" list under the input, in two columns."""
+    grid = Table.grid(padding=(0, 4))
+    for left, right in pairs:
+        grid.add_row(Text(left, "dim"), Text(right, "dim"))
+    return grid
+
+
+def welcome(cwd: Path, model: str, recent: list[str]) -> Panel:
+    """Greeting, mascot, model and cwd on the left, tips and recent sessions on the right, in a titled box."""
+    # Align keeps the mascot's lines together, a centered column would center each one
+    left = Group(*(Align.center(row) for row in (Text("Welcome to py-agent!", "bold"), Text(), MASCOT, Text(),
+                                                  Text(model, "dim"), Text(str(cwd), "dim"))))
+    right = Text.assemble(("Tips for getting started\n", ACCENT), "\n".join(TIPS), ("\n\n", ""),
+                          ("Recent activity\n", ACCENT), ("\n".join(recent) or "No recent activity", "dim"))
+    grid = Table.grid(padding=(0, 2), expand=True)
+    grid.add_column(ratio=2)
+    grid.add_column(ratio=3)
+    grid.add_row(left, right)
+    return Panel(grid, border_style=ACCENT, title="py-agent", title_align="left")

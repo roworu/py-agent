@@ -2,7 +2,7 @@
 and all but read-only commands until the model's plan is approved through exit_plan_mode."""
 
 MODES = ["normal", "accept edits", "plan"]
-MODE_LINES = {"normal": "? shift+tab to cycle modes", "accept edits": "⏵⏵ accept edits on (shift+tab to cycle)",
+MODE_LINES = {"normal": "? for shortcuts", "accept edits": "⏵⏵ accept edits on (shift+tab to cycle)",
               "plan": "⏸ plan mode on (shift+tab to cycle)"}
 PLAN_NOTE = ("<system-reminder>Plan mode is on: don't change any files. Research with read and read-only bash, "
              "then call exit_plan_mode with your plan for the user to approve.</system-reminder>")

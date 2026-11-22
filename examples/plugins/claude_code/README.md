@@ -7,11 +7,12 @@ Install: copy this folder into `<config dir>/plugins/`.
 ## What you get
 
 **Look**
-- Welcome box with a mascot and tips.
-- `⏺` before answers; tool calls as `Bash(ls)`, `Read(path)`, `Update(path)` with `⎿` results.
+- Welcome box with a mascot, the model, cwd, tips and recent sessions; it starts at the top and the input follows the log until it fills the screen.
+- `⏺` before answers; tool calls as `Bash(ls)`, `Read(path)`, `Update(path)` with `⎿` results, the dot dim while running and red on errors.
 - Edit diffs with line numbers in red and green; writes show their first lines.
 - A spinner ("✻ Pondering… (12s · ↓ 300 tokens · esc to interrupt)") that names the todo in progress.
-- The todo list under the spinner while the model works.
+- The todo list under the spinner while the model works; the spinner hides while a question is open.
+- Status line: the mode on the left, model and context left on the right.
 - Reasoning collapsed to `✻ Thinking…`.
 - `ctrl+o` toggles transcript mode: reasoning and full tool output everywhere.
 
@@ -25,6 +26,7 @@ Install: copy this folder into `<config dir>/plugins/`.
 - Read before edit: `write` and `edit` refuse a file the model hasn't read in this conversation, or that changed since it did.
 
 **Input**
+- A `>` prompt in a rounded box; `?` on an empty input lists the shortcuts.
 - Typing `/` opens a command menu with descriptions, added to py-agent's `@` file menu. `↑`/`↓` select, `tab` completes, `enter` runs the command or inserts the file, `esc` closes.
 - `@path` attachments (built into py-agent) are listed under the message, and the file counts as read.
 - `! cmd` runs a command without the model and adds it and its output to the conversation.

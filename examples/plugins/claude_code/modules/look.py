@@ -1,5 +1,6 @@
 """Look: welcome box, ⏺ answers, tool blocks, transcript mode (ctrl+o), spinner, todo list and status line."""
 
+import json
 import random
 import time
 from pathlib import Path
@@ -29,47 +30,65 @@ class LookMixin:
 
     async def on_mount(self) -> None:
         input = self.query_one(self.Input)
-        await self.mount(Static(id="spinner"), Static(id="todos"), before=input)
-        self.query_one("#todos").display = False
+        await self.mount(Static(id="spinner"), before=input)
         input.placeholder = 'Try "explain this codebase"'
         self.set_interval(0.1, self.tick)
         if len(self.agent.messages) == 1:
-            await self.add(Static(render.welcome(self.agent.cwd)))
+            await self.add(Static(render.welcome(self.agent.cwd, self.agent.model.name, self.recent())))
+
+    def recent(self) -> list[str]:
+        """The last sessions in this folder for the welcome box: date and first message."""
+        rows = []
+        for path in sorted(self.agent.sessions.glob("*.jsonl"), reverse=True)[:3]:
+            first = json.loads(path.open().readline())
+            text = first.get("_display", first["content"]).splitlines()
+            rows.append(f"{path.stem[:10]}  {text[0][:40] if text else ''}")
+        return rows
 
     # spinner, todos and status
 
     def tick(self) -> None:
-        """Animate the spinner line while busy; it names the todo in progress when there is one."""
+        """Animate the spinner line while busy, the todo list under it; it names the todo in progress when there is one."""
         spinner = self.query_one("#spinner", Static)
         # answers to approvals and plans change the mode from the worker thread
         self.update_status()
-        if not self.busy:
-            spinner.update("")
+        self.fit_log()
+        # hidden while asking, like claude code
+        spinner.display = self.busy and not self.picker
+        if not spinner.display:
             return
         glyph = GLYPHS[int(time.monotonic() * 8) % len(GLYPHS)]
         current = next((t.get("content") for t in self.todos if isinstance(t, dict) and t.get("status") == "in_progress"), None)
         # ~4 chars per token, real counts only arrive with the last chunk
         n = self.streamed // 4
         tokens = f" · ↓ {n / 1000:.1f}k tokens" if n >= 1000 else f" · ↓ {n} tokens" if n else ""
-        spinner.update(f"{glyph} {current or self.verb}… ({time.monotonic() - self.started:.0f}s{tokens} · esc to interrupt)")
-
-    def draw_todos(self) -> None:
-        """The todo list under the spinner while working and something is left."""
+        line = Text(f"{glyph} {current or self.verb}… ", render.ACCENT)
+        line.append(f"({time.monotonic() - self.started:.0f}s{tokens} · esc to interrupt)", "dim")
         left = any(isinstance(t, dict) and t.get("status") != "completed" for t in self.todos)
-        block = self.query_one("#todos", Static)
-        block.display = self.busy and left
-        block.update(render.todos(self.todos, "  ")[1:] if block.display else "")
+        spinner.update(line + render.todos(self.todos) if left else line)
+
+    def fit_log(self) -> None:
+        """Like claude code, the input follows a short log and stays at the bottom once the log fills the screen."""
+        log = self.query_one("#log")
+        free = self.screen.size.height - sum(w.outer_size.height for w in self.screen.children if w is not log and w.display)
+        height = "1fr" if log.virtual_size.height > free else "auto"
+        # a short log at 1fr is drawn at the bottom, since textual keeps anchored content scrolled to the end
+        if str(log.styles.height) != height:
+            log.styles.height = height
 
     def update_status(self) -> None:
-        queued = f" · {len(self.queue)} queued" if self.queue else ""
-        self.query_one("#status", Static).update(f"{MODE_LINES[self.agent.mode]} · {self.agent.model.name}{queued}"
-                                                 f" · context left until auto-compact: {self.context_left():.0%}")
+        """Mode on the left; model, queue and the context left until auto-compact on the right."""
+        status = self.query_one("#status", Static)
+        queued = f"{len(self.queue)} queued · " if self.queue else ""
+        right = f"{queued}{self.agent.model.name} · context left until auto-compact: {self.context_left():.0%}"
+        left = MODE_LINES[self.agent.mode]
+        status.update(left + right.rjust(status.content_size.width - len(left)))
 
     async def set_busy(self, busy: bool) -> None:
         if busy and not self.busy:
             self.started, self.verb, self.streamed = time.monotonic(), random.choice(VERBS), 0
         await super().set_busy(busy)
-        self.draw_todos()
+        self.tick()
 
     async def show_stopped(self) -> None:
         await self.end_stream()
@@ -125,7 +144,6 @@ class LookMixin:
         block.call = {"name": name, "args": render.parse_args(arguments), "output": None, "start": None}
         if name == "todo_write":
             self.todos = block.call["args"].get("todos") or []
-            self.draw_todos()
         self.draw_tool(block)
 
     def show_tool_result(self, id: str, result: str) -> None:

@@ -29,17 +29,20 @@ def setup(api) -> None:
         Input = completion.make(api.Chat.Input, api.commands)
         Picker = picker.make(api.Chat.Picker)
         CSS = api.Chat.CSS + f"""
+        #log {{ height: auto; scrollbar-size-vertical: 0; }}
         .user {{ color: $text-muted; background: $boost; text-style: none; padding: 0 1; }}
         .bash {{ color: #fd5db1; }}
         .answer {{ height: auto; }}
         .dot {{ width: 2; color: $text; }}
         .answer > Markdown {{ width: 1fr; margin: 0; padding: 0; }}
+        .answer Markdown > *:last-child {{ margin-bottom: 0; }}
+        Markdown .code_inline {{ color: #b1b9f9; background: transparent; }}
         .thought {{ color: $text-muted; text-style: italic; }}
         .interrupted {{ color: $error; }}
         Picker {{ height: auto; }}
-        #spinner {{ height: 1; padding: 0 1; color: {ACCENT}; }}
-        #todos, #menu {{ height: auto; padding: 0 2; }}
-        PromptInput, PromptInput:focus {{ border: round gray; }}
+        #spinner {{ height: auto; padding: 0 1; margin-bottom: 1; display: none; }}
+        #menu {{ height: auto; padding: 0 2; }}
+        PromptInput, PromptInput:focus {{ border: round gray; background: transparent; }}
         """
         BINDINGS = [Binding("shift+tab", "cycle_mode", "cycle mode", priority=True),
                     Binding("ctrl+o", "transcript", "transcript mode")]
