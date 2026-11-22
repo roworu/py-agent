@@ -3,7 +3,7 @@
 import json
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 VERSION = "replaced_during_build"
@@ -37,6 +37,8 @@ class Model:
     base_url: str
     api_key: str
     efforts: dict[str, str]
+    # tokens the model accepts, None when not set
+    context_window: int | None = None
 
     @property
     def name(self) -> str:
@@ -55,6 +57,9 @@ class Config:
     default_model: Model
     default_thinking: str
     prompt_file: Path | None
+    plugins: list[Path]
+    # "plugins" section of settings.json: folder name -> that plugin's settings
+    plugin_settings: dict[str, dict] = field(default_factory=dict)
 
     @property
     def history(self) -> Path:
@@ -77,6 +82,20 @@ def _config_dir() -> Path:
     return Path(os.environ.get("XDG_CONFIG_HOME", "~/.config")).expanduser() / "py-agent"
 
 
+# json names for the python types a config value can have
+JSON_TYPES: dict[type, str] = {dict: "object", list: "array", str: "string", bool: "boolean",
+                               int: "number", float: "number", type(None): "null"}
+
+
+def _check(value, kind: type, where: str):
+    """Return value if it has the expected type, else exit saying what is wrong."""
+    if value is None:
+        sys.exit(f"{where} is missing")
+    if not isinstance(value, kind):
+        sys.exit(f"{where} must be {JSON_TYPES[kind]}, not {JSON_TYPES.get(type(value), type(value).__name__)}")
+    return value
+
+
 def _read(path: Path) -> dict:
     """Read a json file, writing its default first if missing."""
     if not path.exists():
@@ -84,40 +103,47 @@ def _read(path: Path) -> dict:
         path.write_text(json.dumps(DEFAULT_FILES[path.name], indent=2) + "\n")
         path.chmod(0o600)
     try:
-        return json.loads(path.read_text())
+        data = json.loads(path.read_text())
     except (OSError, ValueError) as e:
         sys.exit(f"{path}: {e}")
+    return _check(data, dict, str(path))
 
 
-def _efforts(model: dict) -> dict[str, str]:
+def _efforts(model: dict, where: str) -> dict[str, str]:
     """reasoning_effort per thinking level; levels map to themselves, thinkingLevelMap overrides, null disables."""
     if not model.get("reasoning"):
         return {}
-    overrides = model.get("thinkingLevelMap", {})
+    overrides = _check(model.get("thinkingLevelMap", {}), dict, f"{where}.thinkingLevelMap")
     return {level: effort for level in THINKING_LEVELS[1:] if (effort := overrides.get(level, level))}
 
 
 def load() -> Config:
     """Load settings.json and auth.json into a Config; exits on bad config."""
     path = _config_dir()
-    settings = _read(path / "settings.json")
+    file = path / "settings.json"
+    settings = _read(file)
     auth = _read(path / "auth.json")
 
     # one Model per provider model, in file order
-    try:
-        models = [
-            Model(provider, m["id"], p["baseUrl"], auth.get(provider, ""), _efforts(m))
-            for provider, p in settings.get("providers", {}).items()
-            for m in p.get("models", [])
-        ]
-    except KeyError as e:
-        sys.exit(f"{path / 'settings.json'}: missing {e}")
+    models = []
+    for provider, p in _check(settings.get("providers", {}), dict, f"{file}: providers").items():
+        where = f"{file}: providers.{provider}"
+        p = _check(p, dict, where)
+        base_url = _check(p.get("baseUrl"), str, f"{where}.baseUrl")
+        key = _check(auth.get(provider, ""), str, f"{path / 'auth.json'}: {provider}")
+        for i, m in enumerate(_check(p.get("models", []), list, f"{where}.models")):
+            m = _check(m, dict, f"{where}.models[{i}]")
+            model_id = _check(m.get("id"), str, f"{where}.models[{i}].id")
+            window = m.get("contextWindow")
+            if window is not None:
+                _check(window, int, f"{where}.models[{i}].contextWindow")
+            models.append(Model(provider, model_id, base_url, key, _efforts(m, f"{where}.models[{i}]"), window))
     if not models:
-        sys.exit(f"no models: add providers to {path / 'settings.json'}")
+        sys.exit(f"no models: add providers to {file}")
 
     # defaultModel, else the first one
     name = settings.get("defaultModel")
-    model = _find(models, name) if name else models[0]
+    model = _find(models, _check(name, str, f"{file}: defaultModel")) if name else models[0]
     if not model:
         sys.exit(f"unknown defaultModel {name}")
 
@@ -127,8 +153,16 @@ def load() -> Config:
 
     prompt_file = None
     if override := settings.get("overrideSystemPrompt"):
-        prompt_file = path / Path(override).expanduser()
+        prompt_file = path / Path(_check(override, str, f"{file}: overrideSystemPrompt")).expanduser()
         if not prompt_file.is_file():
             sys.exit(f"overrideSystemPrompt: no such file {prompt_file}")
 
-    return Config(path, models, model, thinking, prompt_file)
+    plugin_settings = _check(settings.get("plugins", {}), dict, f"{file}: plugins")
+    for name, value in plugin_settings.items():
+        _check(value, dict, f"{file}: plugins.{name}")
+    # every folder in plugins/ with a main.py not turned off, sorted so load order is stable
+    plugins = [p for p in sorted((path / "plugins").glob("*/main.py"))
+               if plugin_settings.get(p.parent.name, {}).get("enabled", True)]
+
+    return Config(path, models, model, thinking, prompt_file, plugins, plugin_settings)
+
