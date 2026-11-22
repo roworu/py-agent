@@ -311,8 +311,9 @@ class Chat(App):
                 self.exit()
                 return
             if action == "send":
-                # a command that writes a prompt for the model, like /init; the command is shown, also on replay
-                await self.start({"role": "user", "content": reply, "_display": line})
+                # a command that writes a prompt for the model, like /init; the command is shown, also on replay;
+                # @files in the prompt are attached like in a typed message
+                await self.start({**files.message(self.agent, reply), "_display": line})
                 return
             if action == "update":
                 await self.add(Static(Text("updating..."), classes="info"))
@@ -331,7 +332,9 @@ class Chat(App):
                 # like opencode, the undone message goes back into the input to edit and resend
                 self.query_one(PromptInput).text = reply
                 reply = "undone"
-            await self.add(Static(Text(reply), classes="info"))
+            # commands that show their own ui (a plugin's dialog) reply nothing
+            if reply:
+                await self.add(Static(Text(reply), classes="info"))
             self.update_status()
         else:
             await self.start(files.message(self.agent, line))

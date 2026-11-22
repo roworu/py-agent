@@ -114,6 +114,10 @@ class Agent:
         """Messages sent with each request; override to add notes without saving them."""
         return self.messages
 
+    def request_tools(self) -> list[dict]:
+        """Tool specs sent with each request; override to offer a different set."""
+        return tools.SPECS
+
     def _rewrite(self) -> None:
         self.session.unlink(missing_ok=True)
         self.saved = 1
@@ -211,7 +215,7 @@ class Agent:
                     turn = self._compact_before(turn) or turn
                     continue
                 try:
-                    msg = llm.complete(self.model, self.request_messages(), tools.SPECS, self.thinking,
+                    msg = llm.complete(self.model, self.request_messages(), self.request_tools(), self.thinking,
                                        events.text, events.reasoning, self.stopped, events.retry)
                 except llm.ContextTooLong:
                     if compacted:

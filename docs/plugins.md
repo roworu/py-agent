@@ -11,7 +11,7 @@ The folder is imported as a package, so `main.py` can import its own files with 
 
 `"plugins": {"<folder name>": {"enabled": false}}` in `settings.json` turns a plugin off without deleting it. Other keys there are the plugin's own settings, read with `api.settings(name)`.
 
-`api.VERSION` is the plugin api version, currently `1`. A plugin that needs a newer one sets `API_VERSION = n` in its `main.py`, and py-agent refuses to start with a message saying so.
+`api.VERSION` is the plugin api version, currently `2`. A plugin that needs a newer one sets `API_VERSION = n` in its `main.py`, and py-agent refuses to start with a message saying so.
 
 Ready-made examples are in [`examples/plugins/`](../examples/plugins): copy a folder into `plugins/` to use it.
 
@@ -21,12 +21,13 @@ Ready-made examples are in [`examples/plugins/`](../examples/plugins): copy a fo
 
 | attribute | what it is |
 |---|---|
-| `api.VERSION` | plugin api version, `1`. |
+| `api.VERSION` | plugin api version, `2`. |
 | `api.config` | the loaded `Config` (models, default model and thinking level, config dir). Replace it with `dataclasses.replace(...)` to change settings. A model's `context_window` is its `contextWindow` from `settings.json`, or `None`. |
 | `api.cwd` | folder py-agent runs in. |
 | `api.llm` | streaming client module; `complete(...)` sends one request and returns the assistant message, with the server's token counts in `usage` when sent. |
 | `api.prompt` | system prompt module; `build(cwd, override)` returns the prompt. |
 | `api.files` | `@file` module; `message(agent, line)` builds the user message with mentioned files attached, `attached(content)` returns the attached `(path, contents)`, `list_files(cwd)` feeds the `@` menu. |
+| `api.snapshot` | undo snapshots module; `changes(agent.snapshots, cwd, a, b)` lists `(path, added, removed)` lines per file changed between two snapshots, e.g. the `before`/`after` hashes in `agent.turns`. |
 | `api.tools` | tools module; `TOOLS` maps name → `(function, spec)`, `SPECS` is what the model sees. |
 | `api.commands` | slash commands module; `run(agent, line)` handles a line starting with `/`. |
 | `api.Agent` | agent class, created after all plugins load. Replace with a subclass to change the loop. |
@@ -52,7 +53,7 @@ def setup(api):
 
 ### api.add_command(name, handler, description="", arguments="")
 
-Add a slash command, or replace a built-in one with the same name. `handler(agent, arg)` returns `(reply, action)`, where `action` is `"clear"` (empty the log), `"replay"` (redraw the log from `agent.messages`), `"undo"` (redraw and put `reply` into the input), `"compact"` (run `agent.compact(reply)` in the background and redraw), `"send"` (send `reply` to the model as a message, for commands that write a prompt), `"update"` (install the latest release in the background), `"quit"` or `None`. The name is added to input autocomplete, and `description` and `arguments` (e.g. `"[name]"`) to `/help` and `api.commands.DESCRIPTIONS`, which holds the built-in ones too.
+Add a slash command, or replace a built-in one with the same name. `handler(agent, arg)` returns `(reply, action)`, where `action` is `"clear"` (empty the log), `"replay"` (redraw the log from `agent.messages`), `"undo"` (redraw and put `reply` into the input), `"compact"` (run `agent.compact(reply)` in the background and redraw), `"send"` (send `reply` to the model as a message, for commands that write a prompt), `"update"` (install the latest release in the background), `"quit"` or `None`. `@file` mentions in a `"send"` reply are attached like in a typed message. An empty reply with `None` shows nothing, for commands that open their own UI through `api.chat`. The name is added to input autocomplete, and `description` and `arguments` (e.g. `"[name]"`) to `/help` and `api.commands.DESCRIPTIONS`, which holds the built-in ones too.
 
 ```python
 def setup(api):
@@ -78,6 +79,7 @@ Replace `api.Agent` with a subclass to hook into the loop. Several plugins stack
 - `before_tool(name, args) -> str | None`: before each tool call; returned text refuses the call and goes to the model as its result.
 - `after_tool(name, args, result) -> str`: after each tool call; returns the result the model sees.
 - `request_messages() -> list[dict]`: the messages sent with each request, `agent.messages` by default; return a changed copy to add notes that aren't saved.
+- `request_tools() -> list[dict]`: the tool specs sent with each request, `api.tools.SPECS` by default; return fewer to turn tools off, e.g. per mode.
 
 ```python
 def setup(api):
@@ -104,6 +106,8 @@ def setup(api):
 Token usage is not shown by default. `examples/plugins/context` adds it to the status line from `agent.usage`; `examples/plugins/cost` prices `agent.total` in a `/cost` command, with prices from `api.settings("cost")`.
 
 `examples/plugins/claude_code` puts all of this together to look and behave like Claude Code: approval prompts and modes, plan mode, a `/` and `@` completion menu, rewind, `/init`, custom commands, read-before-edit and more. Its `main.py` installs the pieces from its `modules/` folder; see its [README](../examples/plugins/claude_code/README.md).
+
+`examples/plugins/opencode` does the same for opencode: a home screen, build and plan agents on `tab`, subagents through a `task` tool, `glob`/`grep`/`list`/`webfetch`/todo tools, permissions, `ctrl+x` leader keys, searchable dialogs for models, sessions, themes and commands, a sidebar and session titles; see its [README](../examples/plugins/opencode/README.md).
 
 ## Changing the UI
 

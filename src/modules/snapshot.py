@@ -35,3 +35,12 @@ def restore(git_dir: Path, cwd: Path, current: str, target: str) -> None:
     if paths := changed("d"):
         _git(git_dir, cwd, "checkout", target, "--", *paths)
 
+
+def changes(git_dir: Path, cwd: Path, a: str, b: str) -> list[tuple[str, int, int]]:
+    """(path, added lines, removed lines) per file that differs between two snapshots; binary files count 0."""
+    out = _git(git_dir, cwd, "diff", "--numstat", "--no-renames", "-z", a, b)
+    rows = []
+    for row in filter(None, out.split("\0")):
+        added, removed, path = row.split("\t", 2)
+        rows.append((path, int(added) if added.isdigit() else 0, int(removed) if removed.isdigit() else 0))
+    return rows

@@ -6,19 +6,20 @@ import types
 from collections.abc import Callable
 from pathlib import Path
 
-from . import agent, commands, config, files, llm, prompt, tools, tui
+from . import agent, commands, config, files, llm, prompt, snapshot, tools, tui
 
 
 class Api:
     """Everything py-agent is made of; setup(api) runs before the agent and ui are created."""
 
     # bumped when the api changes; a plugin's main.py can require one with API_VERSION = n
-    VERSION = 1
+    VERSION = 2
 
     def __init__(self, cfg: config.Config, cwd: Path) -> None:
         self.config, self.cwd = cfg, cwd
         # modules: patch their functions or tables to change behavior
         self.llm, self.prompt, self.tools, self.commands, self.files = llm, prompt, tools, commands, files
+        self.snapshot = snapshot
         # classes created at startup: replace with subclasses to extend
         self.Agent, self.Chat = agent.Agent, tui.Chat
         # the running instances, set after all plugins are set up
