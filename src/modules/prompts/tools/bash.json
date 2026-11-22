@@ -1,0 +1,15 @@
+{
+  "description": "Run bash in cwd and return the last {MAX_LINES} lines of output.",
+  "properties": {
+    "command": {
+      "type": "string"
+    },
+    "timeout": {
+      "type": "integer",
+      "description": "Seconds before the command is killed, default 120"
+    }
+  },
+  "required": [
+    "command"
+  ]
+}

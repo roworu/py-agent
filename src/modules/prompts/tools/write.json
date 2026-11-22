@@ -1,0 +1,16 @@
+{
+  "description": "Create or overwrite a file, creating parent directories.",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Path relative to cwd or absolute"
+    },
+    "content": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "path",
+    "content"
+  ]
+}

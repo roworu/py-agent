@@ -1,0 +1,20 @@
+{
+  "description": "Replace exact text that must occur once.",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Path relative to cwd or absolute"
+    },
+    "oldText": {
+      "type": "string"
+    },
+    "newText": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "path",
+    "oldText",
+    "newText"
+  ]
+}

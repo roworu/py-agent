@@ -1,0 +1,20 @@
+{
+  "description": "Read a text file, limited to {MAX_LINES} lines. Use offset and limit for large files.",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Path relative to cwd or absolute"
+    },
+    "offset": {
+      "type": "integer",
+      "description": "1-based starting line"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Maximum lines to read"
+    }
+  },
+  "required": [
+    "path"
+  ]
+}
