@@ -2,6 +2,12 @@
 
 minimal coding agent.
 
+## install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/roworu/py-agent/main/install.sh | sh
+```
+
 ## config
 
 config taken from default os config dir, or could be overrided by `$PY_AGENT_DIR` env.
