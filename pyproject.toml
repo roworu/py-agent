@@ -7,4 +7,3 @@ dependencies = [
     "rich==15.0.0", 
     "textual==8.2.8"
 ]
-

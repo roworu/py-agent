@@ -1,8 +1,6 @@
 # py-agent
 
-minimal coding agent inspired by [pi](https://github.com/earendil-works/pi). 
-
-Commands: `/model`, `/think`, `/clear`, `/quit`. `esc` stops the current answer.
+minimal coding agent.
 
 ## config
 
@@ -15,12 +13,12 @@ config files:
 
 - `auth.json`: `{ "<your_provider_from_settings>": "<key>" }`. Created on first run.
 
-- `AGENTS.md`: appended to the system prompt. If `overrideSystemPrompt==True` - it will completely override system prompt.
-Be careful with it, as you have to mention tools in order for agent to work at all.
+- `sessions/`, `snapshots/`: saved conversations and file snapshots for `/undo`.
 
-- `history`: input history.
+- `plugins/`: every folder with `main.py` is loaded at startup; see [docs/plugins.md](docs/plugins.md).
 
-## tools
+## docs
 
-Built-in tools, always enabled: `read`, `bash`, `edit`, `write`.
-
+- [usage](docs/usage.md): keys, commands, tools, system prompt.
+- [config](docs/config.md): config files and their defaults.
+- [plugins](docs/plugins.md): plugin api and examples.
