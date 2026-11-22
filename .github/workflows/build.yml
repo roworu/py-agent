@@ -2,6 +2,9 @@ name: build
 
 on: [push, workflow_dispatch]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,16 +15,26 @@ jobs:
         with:
           python-version: "3.13"
 
-      - run: pip install pyinstaller rich textual
+      - run: pip install pyinstaller pytest rich==15.0.0 textual==8.2.8
+
+      - run: python -m pytest tests --ignore=tests/e2e
 
       - name: set VERSION from pyproject.toml
         run: |
           v=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
           sed -i "s/^VERSION = .*/VERSION = \"$v\"/" src/modules/config.py
 
-      - run: pyinstaller --onefile --name py-agent --paths src src/main.py
+      - run: pyinstaller --onefile --name py-agent --paths src --add-data src/modules/prompts:modules/prompts src/main.py
+
+      - name: e2e tests on the built binary
+        run: PY_AGENT_BIN=dist/py-agent python -m pytest tests/e2e
 
       - uses: actions/upload-artifact@v4
         with:
           name: py-agent
           path: dist/py-agent
+
+      - if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/py-agent
