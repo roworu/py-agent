@@ -7,11 +7,18 @@ dir="${PY_AGENT_INSTALL_DIR:-$HOME/.local/bin}"
 os="$(uname -s)"
 arch="$(uname -m)"
 
-# release asset per os/arch; only linux x86_64 is built for now
-case "$os/$arch" in
-    Linux/x86_64 | Linux/amd64) asset="py-agent" ;;
+# release asset per os/arch, named like update.py's asset()
+case "$os" in
+    Linux) system="linux" ;;
+    Darwin) system="macos" ;;
+    *) echo "no py-agent binary for $os yet, run it from source instead" >&2; exit 1 ;;
+esac
+case "$arch" in
+    x86_64 | amd64) arch="x86_64" ;;
+    aarch64 | arm64) arch="arm64" ;;
     *) echo "no py-agent binary for $os/$arch yet, run it from source instead" >&2; exit 1 ;;
 esac
+asset="py-agent-$system-$arch"
 
 mkdir -p "$dir"
 echo "downloading py-agent for $os/$arch to $dir"

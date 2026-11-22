@@ -2,6 +2,7 @@
 
 import json
 import os
+import platform
 import sys
 import time
 import urllib.request
@@ -11,7 +12,15 @@ from .config import VERSION, Config
 
 REPO = "roworu/py-agent"
 LATEST = f"https://api.github.com/repos/{REPO}/releases/latest"
-DOWNLOAD = f"https://github.com/{REPO}/releases/latest/download/py-agent"
+DOWNLOAD = f"https://github.com/{REPO}/releases/latest/download/"
+
+
+def asset() -> str:
+    """Release asset name for this os and cpu, like py-agent-linux-x86_64 or py-agent-macos-arm64."""
+    system = {"darwin": "macos"}.get(sys.platform, sys.platform)
+    machine = platform.machine().lower()
+    arch = {"amd64": "x86_64", "aarch64": "arm64"}.get(machine, machine)
+    return f"py-agent-{system}-{arch}"
 
 
 def _parse(version: str) -> tuple[int, ...] | None:
@@ -50,7 +59,7 @@ def install() -> str:
     path = Path(sys.executable)
     tmp = path.with_name(f".{path.name}.new")
     try:
-        with urllib.request.urlopen(DOWNLOAD, timeout=60) as resp, tmp.open("wb") as f:
+        with urllib.request.urlopen(DOWNLOAD + asset(), timeout=60) as resp, tmp.open("wb") as f:
             while chunk := resp.read(1 << 16):
                 f.write(chunk)
         tmp.chmod(0o755)
