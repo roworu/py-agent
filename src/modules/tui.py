@@ -273,6 +273,12 @@ class Chat(App):
         if self.picker:
             self.picker.resolve(None)
 
+    def on_text_selected(self) -> None:
+        # copy on select: the terminal's own copy key (e.g. ctrl+shift+c) can't see textual's selection
+        if text := self.screen.get_selected_text():
+            self.copy_to_clipboard(text)
+            self.notify("copied", timeout=1)
+
     def update_status(self) -> None:
         """Show model, thinking level and whether an answer is running."""
         busy = " · working, esc to stop" if self.busy else ""

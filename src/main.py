@@ -1,4 +1,6 @@
 import argparse
+import os
+import ssl
 import sys
 from pathlib import Path
 
@@ -40,7 +42,19 @@ class PrintEvents:
         return None
 
 
+def use_system_certs() -> None:
+    """Point openssl at the system ca bundle when its built-in path is missing."""
+    # the binary's openssl looks where the build machine (ubuntu) keeps certs, e.g. fedora has them elsewhere
+    if "SSL_CERT_FILE" in os.environ or Path(ssl.get_default_verify_paths().openssl_cafile).is_file():
+        return
+    for path in ("/etc/ssl/certs/ca-certificates.crt", "/etc/pki/tls/certs/ca-bundle.crt", "/etc/ssl/cert.pem"):
+        if Path(path).is_file():
+            os.environ["SSL_CERT_FILE"] = path
+            return
+
+
 def main() -> None:
+    use_system_certs()
     parser = argparse.ArgumentParser(prog="py-agent")
     parser.add_argument("-c", "--continue", dest="resume", action="store_true",
                         help="continue the last session in this folder")
