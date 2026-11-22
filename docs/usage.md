@@ -26,6 +26,7 @@ Run `py-agent` in the folder you want to work in. The model works in that folder
 - `/resume <n>`: continue session `n` from that list.
 - `/undo`: drop the last message and its answer, and revert the files changed meanwhile. The message goes back into the input. Repeat to go further back.
 - `/redo`: bring back what `/undo` dropped, until a new message is sent.
+- `/update`: download the latest release over the running binary; restart py-agent to use it. Release builds check GitHub at startup once a week (`updateCheckDays` in [config.md](config.md)) and show a short notice when a newer version is out.
 - `/help`: list commands.
 - `/quit`, `/exit`: quit.
 

@@ -17,7 +17,7 @@ from textual.widget import Widget
 from textual.widgets import Markdown, Static, TextArea
 from textual.widgets.markdown import MarkdownStream
 
-from . import commands, files
+from . import commands, files, update
 from .agent import Agent
 from .llm import ApiError
 
@@ -253,6 +253,19 @@ class Chat(App):
         self.update_status()
         # a resumed session (py-agent -c) is shown right away
         await self.replay()
+        self.check_update()
+
+    @work(thread=True)
+    def check_update(self) -> None:
+        """Tell about a newer release with a short toast, at most every updateCheckDays."""
+        if version := update.newer(self.agent.config):
+            self.call_from_thread(self.notify, f"py-agent {version} is out, /update to install", timeout=5)
+
+    @work(thread=True)
+    def install_update(self) -> None:
+        """Download the latest release off the event loop."""
+        result = update.install()
+        self.call_from_thread(self.add, Static(Text(result), classes="error" if result.startswith("Error:") else "info"))
 
     def on_unmount(self) -> None:
         # let a running answer end so the worker thread doesn't hold up exit
@@ -294,6 +307,10 @@ class Chat(App):
             if action == "send":
                 # a command that writes a prompt for the model, like /init; the command is shown, also on replay
                 await self.start({"role": "user", "content": reply, "_display": line})
+                return
+            if action == "update":
+                await self.add(Static(Text("updating..."), classes="info"))
+                self.install_update()
                 return
             if action == "compact":
                 await self.add(Static(Text("compacting, esc to stop"), classes="info"))

@@ -29,6 +29,7 @@ Default:
 - `version`: py-agent version that created the file.
 - `defaultModel` (optional): `provider/id` or a bare id. Default: the first model.
 - `defaultThinkingLevel`: `off` `minimal` `low` `medium` `high` `xhigh` `max`.
+- `updateCheckDays` (optional): days between checks for a newer release at startup, `0` never checks. Default: `7`. The last check time is kept in `update-check`.
 - `overrideSystemPrompt` (optional): file that replaces the built-in prompt, relative to the config dir. It must list the tools, or the model won't know about them.
 - `providers`: name → provider. The name is also the key in `auth.json`.
   - `baseUrl`: OpenAI-compatible endpoint; `/chat/completions` is appended.

@@ -52,7 +52,7 @@ def setup(api):
 
 ### api.add_command(name, handler, description="", arguments="")
 
-Add a slash command, or replace a built-in one with the same name. `handler(agent, arg)` returns `(reply, action)`, where `action` is `"clear"` (empty the log), `"replay"` (redraw the log from `agent.messages`), `"undo"` (redraw and put `reply` into the input), `"compact"` (run `agent.compact(reply)` in the background and redraw), `"send"` (send `reply` to the model as a message, for commands that write a prompt), `"quit"` or `None`. The name is added to input autocomplete, and `description` and `arguments` (e.g. `"[name]"`) to `/help` and `api.commands.DESCRIPTIONS`, which holds the built-in ones too.
+Add a slash command, or replace a built-in one with the same name. `handler(agent, arg)` returns `(reply, action)`, where `action` is `"clear"` (empty the log), `"replay"` (redraw the log from `agent.messages`), `"undo"` (redraw and put `reply` into the input), `"compact"` (run `agent.compact(reply)` in the background and redraw), `"send"` (send `reply` to the model as a message, for commands that write a prompt), `"update"` (install the latest release in the background), `"quit"` or `None`. The name is added to input autocomplete, and `description` and `arguments` (e.g. `"[name]"`) to `/help` and `api.commands.DESCRIPTIONS`, which holds the built-in ones too.
 
 ```python
 def setup(api):

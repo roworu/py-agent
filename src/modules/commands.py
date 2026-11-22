@@ -14,6 +14,7 @@ DESCRIPTIONS: dict[str, tuple[str, str]] = {
     "/resume": ("[n]", "list this folder's sessions or continue one"),
     "/undo": ("", "drop the last message and revert its file changes"),
     "/redo": ("", "bring back what /undo dropped"),
+    "/update": ("", "update py-agent to the latest release"),
     "/help": ("", "list commands"),
     "/quit": ("", "exit (also ctrl+q)"),
     "/exit": ("", "exit"),
@@ -32,7 +33,7 @@ EXTRA: dict[str, Callable[[Agent, str], tuple[str, str | None]]] = {}
 
 
 def run(agent: Agent, line: str) -> tuple[str, str | None]:
-    """Apply a slash command; return the reply and the ui action ("clear", "replay", "undo", "compact", "send", "quit" or None)."""
+    """Apply a slash command; return the reply and the ui action ("clear", "replay", "undo", "compact", "send", "update", "quit" or None)."""
     name, _, arg = line.partition(" ")
     arg = arg.strip()
     if name in EXTRA:
@@ -42,6 +43,9 @@ def run(agent: Agent, line: str) -> tuple[str, str | None]:
     if name == "/clear":
         agent.reset()
         return "new conversation", "clear"
+    if name == "/update":
+        # a download, so the ui runs update.install() in a worker
+        return "", "update"
     if name == "/compact":
         # slow, so the ui runs agent.compact(arg) in its worker
         return arg, "compact"

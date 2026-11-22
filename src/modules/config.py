@@ -60,6 +60,8 @@ class Config:
     plugins: list[Path]
     # "plugins" section of settings.json: folder name -> that plugin's settings
     plugin_settings: dict[str, dict] = field(default_factory=dict)
+    # days between checks for a newer release, 0 never checks
+    update_check_days: int = 7
 
     @property
     def history(self) -> Path:
@@ -164,5 +166,7 @@ def load() -> Config:
     plugins = [p for p in sorted((path / "plugins").glob("*/main.py"))
                if plugin_settings.get(p.parent.name, {}).get("enabled", True)]
 
-    return Config(path, models, model, thinking, prompt_file, plugins, plugin_settings)
+    update_check_days = _check(settings.get("updateCheckDays", 7), int, f"{file}: updateCheckDays")
+
+    return Config(path, models, model, thinking, prompt_file, plugins, plugin_settings, update_check_days)
 
